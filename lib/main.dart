@@ -381,7 +381,25 @@ class _HomePageState extends State<HomePage> {
                   PaddedElevatedButton(
                     buttonText: 'schedule notification for 2 mins',
                     onPressed: () async {
-                      await _zonedScheduleNotification();
+                      await _zonedScheduleNotification(2);
+                    },
+                  ),
+                  PaddedElevatedButton(
+                    buttonText: 'schedule notification for 4 mins',
+                    onPressed: () async {
+                      await _zonedScheduleNotification(4);
+                    },
+                  ),
+                  PaddedElevatedButton(
+                    buttonText: 'schedule notification for 8 mins',
+                    onPressed: () async {
+                      await _zonedScheduleNotification(8);
+                    },
+                  ),
+                  PaddedElevatedButton(
+                    buttonText: 'schedule notification for 10 mins',
+                    onPressed: () async {
+                      await _zonedScheduleNotification(10);
                     },
                   ),
                   PaddedElevatedButton(
@@ -407,11 +425,6 @@ class _HomePageState extends State<HomePage> {
                           'Check if notifications are enabled for this app',
                       onPressed: _areNotifcationsEnabledOnAndroid,
                     ),
-                    PaddedElevatedButton(
-                      buttonText: 'Request permission (API 33+)',
-                      onPressed: () => _requestPermissions(),
-                    ),
-                    
                     PaddedElevatedButton(
                       buttonText: 'Cancel notification with tag',
                       onPressed: () async {
@@ -473,12 +486,12 @@ class _HomePageState extends State<HomePage> {
   }
 
 
-  Future<void> _zonedScheduleNotification() async {
+  Future<void> _zonedScheduleNotification(int mins) async {
     await flutterLocalNotificationsPlugin.zonedSchedule(
         0,
         'scheduled title',
         'scheduled body',
-        tz.TZDateTime.now(tz.local).add(const Duration(minutes: 2)),
+        tz.TZDateTime.now(tz.local).add(Duration(minutes: mins)),
         const NotificationDetails(
             android: AndroidNotificationDetails(
                 'your channel id', 'your channel name',
