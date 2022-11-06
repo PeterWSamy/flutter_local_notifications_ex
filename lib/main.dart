@@ -245,9 +245,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-
   bool _notificationsEnabled = false;
-
+  final TextEditingController _textController = TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -378,28 +377,26 @@ class _HomePageState extends State<HomePage> {
                       await _cancelNotification();
                     },
                   ),
+                  SizedBox(
+                    width: 120,
+                    child: TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Minutes',
+                      ),
+                      controller: _textController,
+                    ),
+                  ),
+                  const Divider(),
                   PaddedElevatedButton(
-                    buttonText: 'schedule notification for 2 mins',
+                    buttonText: 'schedule normal notification',
                     onPressed: () async {
-                      await _zonedScheduleNotification(2);
+                      await _zonedScheduleNotification();
                     },
                   ),
                   PaddedElevatedButton(
-                    buttonText: 'schedule notification for 4 mins',
+                    buttonText: 'schedule full screen notification',
                     onPressed: () async {
-                      await _zonedScheduleNotification(4);
-                    },
-                  ),
-                  PaddedElevatedButton(
-                    buttonText: 'schedule notification for 8 mins',
-                    onPressed: () async {
-                      await _zonedScheduleNotification(8);
-                    },
-                  ),
-                  PaddedElevatedButton(
-                    buttonText: 'schedule notification for 10 mins',
-                    onPressed: () async {
-                      await _zonedScheduleNotification(10);
+                      await _showFullScreenNotification();
                     },
                   ),
                   PaddedElevatedButton(
@@ -425,51 +422,17 @@ class _HomePageState extends State<HomePage> {
                           'Check if notifications are enabled for this app',
                       onPressed: _areNotifcationsEnabledOnAndroid,
                     ),
-                    PaddedElevatedButton(
-                      buttonText: 'Cancel notification with tag',
-                      onPressed: () async {
-                        await _cancelNotificationWithTag();
-                      },
-                    ),
-                    PaddedElevatedButton(
-                      buttonText: 'Show ongoing notification',
-                      onPressed: () async {
-                        await _showOngoingNotification();
-                      },
-                    ),
-                    PaddedElevatedButton(
-                      buttonText: 'Create notification channel',
-                      onPressed: () async {
-                        await _createNotificationChannel();
-                      },
-                    ),
-                    PaddedElevatedButton(
-                      buttonText: 'Delete notification channel',
-                      onPressed: () async {
-                        await _deleteNotificationChannel();
-                      },
-                    ),
-                    PaddedElevatedButton(
-                      buttonText: 'Start foreground service',
-                      onPressed: () async {
-                        await _startForegroundService();
-                      },
-                    ),
-                    PaddedElevatedButton(
-                      buttonText:
-                          'Start foreground service with blue background '
-                          'notification',
-                      onPressed: () async {
-                        await _startForegroundServiceWithBlueBackgroundNotification();
-                      },
-                    ),
-                    PaddedElevatedButton(
-                      buttonText: 'Stop foreground service',
-                      onPressed: () async {
-                        await _stopForegroundService();
-                      },
-                    ),
                   ],
+                  const Divider(),
+                  const Center(
+                      child: Text(
+                    'Thanks for your time',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 50,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue),
+                  )),
                 ],
               ),
             ),
@@ -481,17 +444,14 @@ class _HomePageState extends State<HomePage> {
     await flutterLocalNotificationsPlugin.cancel(--id);
   }
 
-  Future<void> _cancelNotificationWithTag() async {
-    await flutterLocalNotificationsPlugin.cancel(--id, tag: 'tag');
-  }
-
-
-  Future<void> _zonedScheduleNotification(int mins) async {
+  Future<void> _zonedScheduleNotification() async {
+    await _cancelAllNotifications();
     await flutterLocalNotificationsPlugin.zonedSchedule(
         0,
         'scheduled title',
         'scheduled body',
-        tz.TZDateTime.now(tz.local).add(Duration(minutes: mins)),
+        tz.TZDateTime.now(tz.local)
+            .add(Duration(minutes: int.parse(_textController.text))),
         const NotificationDetails(
             android: AndroidNotificationDetails(
                 'your channel id', 'your channel name',
@@ -501,23 +461,42 @@ class _HomePageState extends State<HomePage> {
             UILocalNotificationDateInterpretation.absoluteTime);
   }
 
-
-  Future<void> _checkPendingNotificationRequests() async {
-    final List<PendingNotificationRequest> pendingNotificationRequests =
-        await flutterLocalNotificationsPlugin.pendingNotificationRequests();
-    return showDialog<void>(
+  Future<void> _showFullScreenNotification() async {
+    await showDialog(
       context: context,
-      builder: (BuildContext context) => AlertDialog(
-        content:
-            Text('${pendingNotificationRequests.length} pending notification '
-                'requests'),
+      builder: (_) => AlertDialog(
+        title: const Text('Turn off your screen'),
+        content: const Text('to see the full-screen intent press OK and TURN '
+            'OFF your screen'),
         actions: <Widget>[
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await flutterLocalNotificationsPlugin.zonedSchedule(
+                  0,
+                  'scheduled title',
+                  'scheduled body',
+                  tz.TZDateTime.now(tz.local)
+                      .add(Duration(minutes: int.parse(_textController.text))),
+                  const NotificationDetails(
+                      android: AndroidNotificationDetails(
+                          'full screen channel id', 'full screen channel name',
+                          channelDescription: 'full screen channel description',
+                          priority: Priority.high,
+                          importance: Importance.high,
+                          fullScreenIntent: true)),
+                  androidAllowWhileIdle: true,
+                  uiLocalNotificationDateInterpretation:
+                      UILocalNotificationDateInterpretation.absoluteTime);
+              Navigator.pop(context);
             },
             child: const Text('OK'),
-          ),
+          )
         ],
       ),
     );
@@ -525,113 +504,6 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _cancelAllNotifications() async {
     await flutterLocalNotificationsPlugin.cancelAll();
-  }
-
-  Future<void> _showOngoingNotification() async {
-    const AndroidNotificationDetails androidNotificationDetails =
-        AndroidNotificationDetails('your channel id', 'your channel name',
-            channelDescription: 'your channel description',
-            importance: Importance.max,
-            priority: Priority.high,
-            ongoing: true,
-            autoCancel: false);
-    const NotificationDetails notificationDetails =
-        NotificationDetails(android: androidNotificationDetails);
-    await flutterLocalNotificationsPlugin.show(
-        id++,
-        'ongoing notification title',
-        'ongoing notification body',
-        notificationDetails);
-  }
-
-  Future<void> _repeatNotification() async {
-    const AndroidNotificationDetails androidNotificationDetails =
-        AndroidNotificationDetails(
-            'repeating channel id', 'repeating channel name',
-            channelDescription: 'repeating description');
-    const NotificationDetails notificationDetails =
-        NotificationDetails(android: androidNotificationDetails);
-    await flutterLocalNotificationsPlugin.periodicallyShow(
-        id++,
-        'repeating title',
-        'repeating body',
-        RepeatInterval.everyMinute,
-        notificationDetails,
-        androidAllowWhileIdle: true);
-  }
-
-
-  Future<void> _startForegroundService() async {
-    const AndroidNotificationDetails androidNotificationDetails =
-        AndroidNotificationDetails('your channel id', 'your channel name',
-            channelDescription: 'your channel description',
-            importance: Importance.max,
-            priority: Priority.high,
-            ticker: 'ticker');
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.startForegroundService(1, 'plain title', 'plain body',
-            notificationDetails: androidNotificationDetails, payload: 'item x');
-  }
-
-  Future<void> _startForegroundServiceWithBlueBackgroundNotification() async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'your channel id',
-      'your channel name',
-      channelDescription: 'color background channel description',
-      importance: Importance.max,
-      priority: Priority.high,
-      ticker: 'ticker',
-      color: Colors.blue,
-      colorized: true,
-    );
-
-    /// only using foreground service can color the background
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.startForegroundService(
-            1, 'colored background text title', 'colored background text body',
-            notificationDetails: androidPlatformChannelSpecifics,
-            payload: 'item x');
-  }
-
-  Future<void> _stopForegroundService() async {
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.stopForegroundService();
-  }
-
-  Future<void> _createNotificationChannel() async {
-    const AndroidNotificationChannel androidNotificationChannel =
-        AndroidNotificationChannel(
-      'your channel id 2',
-      'your channel name 2',
-      description: 'your channel description 2',
-    );
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(androidNotificationChannel);
-
-    await showDialog<void>(
-        context: context,
-        builder: (BuildContext context) => AlertDialog(
-              content:
-                  Text('Channel with name ${androidNotificationChannel.name} '
-                      'created'),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('OK'),
-                ),
-              ],
-            ));
   }
 
   Future<void> _areNotifcationsEnabledOnAndroid() async {
@@ -656,29 +528,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ));
-  }
-
-  Future<void> _deleteNotificationChannel() async {
-    const String channelId = 'your channel id 2';
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.deleteNotificationChannel(channelId);
-
-    await showDialog<void>(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        content: const Text('Channel with id $channelId deleted'),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
   }
 }
 
